@@ -29,7 +29,6 @@ async function bootstrap() {
     .addTag('customTag')
     .setBasePath(apiVersionPrefix)
     .addBearerAuth()
- 
     .build();
   const document = SwaggerModule.createDocument(app, options);
   SwaggerModule.setup(`api/${apiVersionPrefix}`, app, document);
