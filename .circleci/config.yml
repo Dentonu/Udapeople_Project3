@@ -43,16 +43,17 @@ jobs:
           
   test-frontend:
     docker:
+      # Docker image here
       - image: circleci/node:13.8.0
     steps:
-    - checkout
-    - restore_cache:
-        keys: [frontend-build]
-    - run:
-        name: frontend unit tests
-        command: |
-          cd frontend
-          npm install
-          npm run test
+      - checkout
+      - restore_cache:
+          keys: [frontend-build]
+      - run:
+          name: frontend unit tests
+          command: |
+            cd frontend
+            npm install
+            npm run test
 
           
