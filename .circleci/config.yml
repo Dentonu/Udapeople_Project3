@@ -17,7 +17,11 @@ workflows:
           requires: [test-frontend]
       - scan-backend:
           requires: [test-backend]
-      
+      - deploy-infrastructure:
+          requires: [test-frontend, test-backend, scan-frontend, scan-backend]
+          filters:
+            branches:
+              only: [master]
 
 jobs:
   build-frontend:
@@ -124,4 +128,13 @@ jobs:
               --template-file .circleci/files/backend.yml \
               --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
               --tags project=udapeople
-          
+      - run:
+          name: Ensure front-end infrastructure exist
+          command: |
+            aws cloudformation deploy \
+              --stack-name "frontend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --template-file .circleci/files/frontend.yml \
+              --parameter-overrides ID="${CIRCLE_WORKFLOW_ID:0:7}"  \
+              --tags project=udapeople    
+
+        
