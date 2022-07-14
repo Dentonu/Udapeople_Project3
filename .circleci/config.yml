@@ -1,7 +1,8 @@
 version: 2.1
 
 orbs:
-  node: circleci/node@4.7
+  node: circleci/node@4.7 
+  slack: circleci/slack@4.10.1
 
 workflows:
   default:
