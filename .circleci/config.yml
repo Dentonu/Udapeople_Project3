@@ -41,6 +41,8 @@ workflows:
           filters:
             branches:
               only: [circleci-editor/90/circleci-project-setup]
+      - configure-infrastructure:
+          requires: [deploy-infrastructure]
 
 jobs:
   build-frontend:
