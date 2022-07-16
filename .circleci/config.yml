@@ -245,7 +245,6 @@ jobs:
       - aws-cli/setup
       - attach_workspace:
           at: ~/
-
       - run:
           name: Run migrations
           command: |
