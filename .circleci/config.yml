@@ -173,35 +173,27 @@ jobs:
 
   configure-infrastructure:
     docker:
-      # Docker image here that supports Ansible
-      - image: python:3.9.1-alpine3.12
+      - image: python:3.10.5-alpine3.16
     steps:
-      # Checkout code from git
       - checkout
-      # Add ssh keys with fingerprint
       - add_ssh_keys:
-          fingerprints:
-            ["7c:4f:9a:16:5a:9d:82:3b:f8:91:1f:4c:ea:f7:38:de"]
-      # attach workspace
+          fingerprints: ["7c:4f:9a:16:5a:9d:82:3b:f8:91:1f:4c:ea:f7:38:de"]
       - attach_workspace:
-          at: ~/
+          at: ~/tmp
       - run:
           name: Install dependencies
           command: |
-            apk update
-            apk add --upgrade tar
-            apk add --upgrade gzip
-            apk add --upgrade curl
-            apk add --upgrade bash
             apk add --update ansible
-            apk add openssh-client
             apk add --update openssh-server
-            pip3 install awscli     
+            apk --no-cache add --virtual builds-deps build-base python3
+            pip install --upgrade pip && pip install --upgrade awscli
       - run:
           name: Configure server
           command: |
+            pwd 
             cd .circleci/ansible
-            pwd
-            ansible-playbook -i inventory.txt configure-server.yml
+            ansible-playbook -i Udapeople_Project3/.circleci/ansible/inventory.txt configure-server.yml
+      #- destroy-environment
+
       # Here's where you will add some code to rollback on failure
       #- destroy-environment 
