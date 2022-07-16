@@ -192,7 +192,7 @@ jobs:
           command: |
             pwd 
             cd .circleci/ansible
-            ansible-playbook -i Udapeople_Project3/.circleci/ansible/inventory.txt configure-server.yml
+            ansible-playbook -i ~/tmp/project/.circleci/ansible/inventory.txt configure-server.yml
       #- destroy-environment
 
       # Here's where you will add some code to rollback on failure
