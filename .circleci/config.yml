@@ -3,6 +3,7 @@ version: 2.1
 orbs:
   node: circleci/node@4.7 
   slack: circleci/slack@4.10.1
+  aws-cli: circleci/aws-cli@3.1.1
 
 
 commands:
@@ -44,6 +45,8 @@ workflows:
               only: [circleci-editor/90/circleci-project-setup]
       - configure-infrastructure:
           requires: [deploy-infrastructure]
+      - run-migrations:
+          requires: [configure-infrastructure]
 
 jobs:
   build-frontend:
@@ -197,3 +200,38 @@ jobs:
 
       # Here's where you will add some code to rollback on failure
       #- destroy-environment 
+
+  run-migrations:
+    docker:
+      # Docker image here that supports NodeJS
+      - image: circleci/node:13.8.0
+    steps:
+      # Checkout code from git
+      - checkout
+      - aws-cli/setup
+      - attach_workspace:
+          at: ~/
+
+      - run:
+          name: Run migrations
+          command: |
+            cd backend
+            npm install
+            npm run migrations > migrations_dump.log
+            echo
+            cat migrations_dump.log
+            echo
+      - run:
+          name: Send migration results to kivdb
+          command: |
+            if grep -q "has been executed successfully." ~/project/backend/migrations_dump.log
+            then
+                curl --insecure https://kvdb.io/QUtm9gL5qrSrMSXw5s2L1C/migration_${CIRCLE_WORKFLOW_ID:0:7}  -d '1'
+            fi
+      - persist_to_workspace:
+          root: ~/
+          paths:
+              - project/backend/migrations_dump.log
+     # Here's where you will add some code to rollback on failure
+      # - revert-migrations
+      # - destroy-environment
