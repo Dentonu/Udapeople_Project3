@@ -86,6 +86,8 @@ workflows:
           requires: [run-migrations]
       - smoke-test:
           requires: [deploy-backend, deploy-frontend]
+      - cloudfront-update:
+          requires: [smoke-test]
 
 jobs:
   build-frontend:
@@ -421,5 +423,35 @@ jobs:
               return 1
             fi
       # Here's where you will add some code to rollback on failure
+      - revert-migrations
+      - destroy-environment
+      
+  cloudfront-update:
+    docker:
+      - image: amazon/aws-cli 
+    steps:
+      - checkout 
+      - run:
+          name: Install dependencies
+          command: |
+            yum -y install tar gzip awscli curl npm nodejs
+      - run:
+          name: Update cloudfront distribution
+          command: |
+             export OldWorkflowID=$(aws cloudformation \
+               list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
+               --no-paginate --output text)
+             echo $OldWorkflowID >> ~/OldWorkflowID.txt
+             cat ~/OldWorkflowID.txt
+             
+             aws cloudformation deploy \
+               --template-file .circleci/files/cloudfront.yml \
+               --stack-name InitialStack \
+               --parameter-overrides WorkflowID="udapeole-${CIRCLE_WORKFLOW_ID:0:7}" \
+               --tags project=udapeople
+          
+              echo OldWorkflowID: "${OldWorkflowID}"
+              echo Current Workflow Id: "${CIRCLE_WORKFLOW_ID:0:7}"  
+
       - revert-migrations
       - destroy-environment
