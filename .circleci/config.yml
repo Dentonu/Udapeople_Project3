@@ -306,52 +306,47 @@ jobs:
       
   deploy-frontend:
     docker:
-      # Docker image here that supports AWS CLI
-      - image: python:3.9.1-alpine3.12
+      - image: amazon/aws-cli
     steps:
-      # Checkout code from git
       - checkout
-      - attach_workspace:
-          at: ~/
       - run:
           name: Install dependencies
           command: |
-            # your code here
-            apk add --update curl
-            apk add --update nodejs  
-            apk add --update npm
-            apk add --update ansible
-            pip3 install awscli
+            yum update -y && yum install -y sudo
+            sudo yum install -y gcc-c++ make
+            curl -sL https://rpm.nodesource.com/setup_16.x | sudo -E bash -
+            sudo yum install nodejs -y
+            yum install tar -y
+            yum install gzip -y
+            # Use n version manager to use Node.js v13.8.0
+            sudo npm install --global n
+            sudo n 13.8.0
+      - attach_workspace:
+          at: ~/
+
       - run:
-          name: Get backend url
+          name: Get Backend Url
           command: |
-            # your code here
             export BACKEND_IP=$(aws ec2 describe-instances \
-              --filters Name=tag:Name,Values="backend-${CIRCLE_WORKFLOW_ID:0:7}" \
-              --query 'Reservations[].Instances[].PublicIpAddress' \
+              --filters "Name=tag:Name,Values=backend-${CIRCLE_WORKFLOW_ID:0:7}" \
+              --query 'Reservations[*].Instances[*].PublicIpAddress' \
               --output text)
             export API_URL="http://${BACKEND_IP}:3030"
             echo "API_URL = ${API_URL}"
             echo API_URL="http://${BACKEND_IP}:3030" >> frontend/.env
-            echo $BACKEND_IP > ~/backend_ip.txt
             cat frontend/.env
       - run:
-          name: Deploy frontend objects
+          name: Deploy front-end object
           command: |
-            # your code here
             cd frontend
             npm install
             npm run build
             tar -czvf artifact-"${CIRCLE_WORKFLOW_ID:0:7}".tar.gz dist
             aws s3 cp dist s3://udapeople-${CIRCLE_WORKFLOW_ID:0:7} --recursive
-      - persist_to_workspace:
-          root: ~/
-          paths:
-            - backend_ip.txt
-      # Here's where you will add some code to rollback on failure
-      - revert-migrations
       - destroy-environment
-      
+      - revert-migrations
+       
+     
   deploy-backend:
     docker:
       # Docker image here that supports Ansible
@@ -446,31 +441,31 @@ jobs:
       
   cloudfront-update:
     docker:
-      - image: amazon/aws-cli 
+      - image: cimg/base:stable
     steps:
-      - checkout 
+      - checkout
+      - install_awscli
+      - install_nodejs
       - run:
-          name: Install dependencies
+          name: Save Old Workflow ID to a text file
           command: |
-            yum -y install tar gzip awscli curl npm nodejs
+            aws cloudformation \
+               list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
+               --no-paginate --output text > ~/workflowfile.txt
+            cat ~/workflowfile.txt
+      - persist_to_workspace:
+          root: ~/
+          paths:
+            - workflowfile.txt
+
       - run:
           name: Update cloudfront distribution
           command: |
-             export OldWorkflowID=$(aws cloudformation \
-               list-exports --query "Exports[?Name==\`WorkflowID\`].Value" \
-               --no-paginate --output text)
-             echo $OldWorkflowID >> ~/OldWorkflowID.txt
-             cat ~/OldWorkflowID.txt
-             
-             aws cloudformation deploy \
-               --template-file .circleci/files/cloudfront.yml \
-               --stack-name InitialStack \
-               --parameter-overrides WorkflowID="udapeole-${CIRCLE_WORKFLOW_ID:0:7}" \
-               --tags project=udapeople
-          
-              echo OldWorkflowID: "${OldWorkflowID}"
-              echo Current Workflow Id: "${CIRCLE_WORKFLOW_ID:0:7}"  
-
+            aws cloudformation deploy \
+              --template-file .circleci/files/cloudfront.yml \
+              --parameter-overrides WorkflowID="${CIRCLE_WORKFLOW_ID:0:7}" \
+              --stack-name InitialStack
+     
       - revert-migrations
       - destroy-environment
       
